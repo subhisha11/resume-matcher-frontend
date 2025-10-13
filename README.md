@@ -68,3 +68,25 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/d
 ### `npm run build` fails to minify
 
 This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+## AI Resume Tips (OpenAI Integration)
+
+This project includes an **AI-powered Resume Tips feature** using the OpenAI API to generate professional resume advice for users.
+
+### How It Works
+- The “Show AI Resume Tips” button requests suggestions from OpenAI based on your resume and target job.
+- Tips are shown to help improve your resume for specific opportunities.
+
+### Quota & Billing Notice
+- This feature works while the OpenAI account has free trial credits.
+- After free credits are used, OpenAI requires billing to continue API use.
+- When quota is exceeded or billing is missing, the feature is disabled and informs the user.
+
+### Demonstration
+- The AI Resume Tips code is included and can be enabled with a valid API key and quota.
+- All other features (matching, jobs, email notifications) do not require OpenAI or payment.
+
+### How to Enable
+- Add a valid OpenAI API key with available quota to `.env`.
+- Uncomment the AI button/UI and backend route as needed.
+
+---
