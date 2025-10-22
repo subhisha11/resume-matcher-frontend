@@ -15,7 +15,8 @@ import { Document, Page, pdfjs } from 'react-pdf';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
-const API = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+const API = process.env.REACT_APP_API_URL || "https://resume-matcher-backend-6-e3q6.onrender.com";
+
 
 function SkillTags({ skills, color }) {
   if (!skills || skills.length === 0)
@@ -97,7 +98,7 @@ function Profile({ token }) {
           ) : (
             <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", mt: 1 }}>
               {profile.skills && profile.skills.length > 0 ? (
-                profile.skills.map(skill => <Chip key={skill} label={skill} color="primary" />)
+                profile.skills.map((skill,idx) => <Chip key={skill+"-"+idx} label={skill} color="primary" />)
               ) : (
                 <Typography color="text.secondary">No skills listed</Typography>
               )}
@@ -183,18 +184,22 @@ function App() {
   };
 
   // Auth
-  const handleAuth = async (endpoint) => {
-    setError('');
-    try {
-      const res = await axios.post(`${API}/${endpoint}`, { username, password });
-      setToken(res.data.token);
-      setPage('matcher');
-      notify("Login successful!", "success");
-    } catch (e) {
-      setError(e.response?.data?.error || 'Auth error');
-      notify("Authentication failed!", "error");
-    }
-  };
+  const handleAuth = async () => {
+  setError('');
+  try {
+    const res = await axios.post(
+      'https://resume-matcher-backend-6-e3q6.onrender.com/api/login',
+      { username, password }
+    );
+
+    setToken(res.data.token);
+    setPage('matcher');
+    notify("Login successful!", "success");
+  } catch (e) {
+    setError(e.response?.data?.error || 'Auth error');
+    notify("Authentication failed!", "error");
+  }
+};
 
   // Resume upload with preview
   const handleUpload = async () => {
@@ -203,129 +208,173 @@ function App() {
       notify("Please select a resume file.", "warning");
       return;
     }
-    const form = new FormData();
-    form.append('resume', fileInput.current.files[0]);
-    try {
-      const res = await axios.post(
-        `${API}/upload`,
-        form,
-        { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' } }
-      );
-      setUploadMsg('Uploaded! File URL: ' + res.data.url);
-      setFilePreview(res.data.url);
-      if (res.data.resumeText) setResume(res.data.resumeText);
-      notify("Resume uploaded successfully!", "success");
-    } catch (e) {
-      setUploadMsg('Upload error.');
-      notify("Upload error!", "error");
-    }
-  };
-
+     const form = new FormData();
+  form.append('resume', fileInput.current.files[0]);
+  try {
+    const res = await axios.post(
+      'https://resume-matcher-backend-6-e3q6.onrender.com/api/upload',
+      form,
+      { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' } }
+    );
+    setUploadMsg('Uploaded! File URL: ' + res.data.url);
+    setFilePreview(res.data.url);
+    if (res.data.resumeText) setResume(res.data.resumeText);
+    notify("Resume uploaded successfully!", "success");
+  } catch (e) {
+    setUploadMsg('Upload error.');
+    notify("Upload error!", "error");
+  }
+};
   // Resume matcher
   const matchResume = async (e) => {
     e.preventDefault();
     setError('');
     setMatch(null); setAiTips('');
-    try {
-      const res = await axios.post(
-        `${API}/match`,
-        { resume, job },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setMatch(res.data);
-      notify(`Your resume matched ${res.data.score}% for this job!`, res.data.score > 50 ? "success" : "info");
-    } catch (e) {
-      setError(e.response?.data?.error || 'Match error');
-      notify("Matching error!", "error");
-    }
-  };
+     try {
+    const res = await axios.post(
+      'https://resume-matcher-backend-6-e3q6.onrender.com/api/match',
+      { resume, job },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    setMatch(res.data);
+    notify(`Your resume matched ${res.data.score}% for this job!`, res.data.score > 50 ? "success" : "info");
+  } catch (e) {
+    setError(e.response?.data?.error || 'Match error');
+    notify("Matching error!", "error");
+  }
+};
+
 
   // Dashboard/history
   const fetchDashboard = async () => {
-    try {
-      const res = await axios.get(`${API}/my-matches`, { headers: { Authorization: `Bearer ${token}` } });
-      setHistory(res.data.matches);
-      notify("Fetched match history.", "info");
-    } catch (e) { notify("Could not fetch history.", "error"); }
-  };
+  try {
+    const res = await axios.get(
+      'https://resume-matcher-backend-6-e3q6.onrender.com/api/my-matches',
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    setHistory(res.data.matches);
+    notify("Fetched match history.", "info");
+  } catch (e) {
+    notify("Could not fetch history.", "error");
+  }
+};
 
   // Admin analytics
-  const fetchAdminAnalytics = async () => {
-    try {
-      const res = await axios.get(`${API}/admin`, { headers: { Authorization: `Bearer ${token}` } });
-      setAdminData(res.data);
-      notify("Loaded admin analytics.", "info");
-    } catch (e) { notify("Failed to load analytics.", "error"); }
-  };
-
+ fetchAdminAnalytics = async () => {
+  try {
+    const res = await axios.get(
+      'https://resume-matcher-backend-6-e3q6.onrender.com/api/admin',
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    setAdminData(res.data);
+    notify("Loaded admin analytics.", "info");
+  } catch (e) {
+    notify("Failed to load analytics.", "error");
+  }
+};
   // AI Resume Tips
-  async function getAiTips() {
-    if (!match) return;
-    setAiLoading(true);
-    setAiTips("");
-    try {
-      const res = await axios.post(API+"/ai-tips",{
+const getAiTips = async () => {
+  if (!match) return;
+  setAiLoading(true);
+  setAiTips("");
+  try {
+    const res = await axios.post(
+      'https://resume-matcher-backend-6-e3q6.onrender.com/api/ai-tips',
+      {
         resume: match.resumeSkills.join(", "),
         job: match.jobSkills.join(", "),
         missingSkills: match.missingSkills
-      }, { headers: { Authorization: `Bearer ${token}` } });
-      setAiTips(res.data.tips);
-      notify("AI resume tips loaded.", "info");
-    } catch {
-      setAiTips("Could not fetch AI suggestions.");
-      notify("Failed to load AI resume tips.", "error");
-    }
-    setAiLoading(false);
+      },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    setAiTips(res.data.tips);
+    notify("AI resume tips loaded.", "info");
+  } catch {
+    setAiTips("Could not fetch AI suggestions.");
+    notify("Failed to load AI resume tips.", "error");
   }
-
-  // Job Board
-  const loadJobs = async () => {
-    const res = await axios.get(API + '/jobs');
+  setAiLoading(false);
+};
+// Job Board
+const loadJobs = async () => {
+  try {
+    const res = await axios.get(
+      'https://resume-matcher-backend-6-e3q6.onrender.com/api/jobs'
+    );
     setJobs(res.data.jobs);
     notify("Loaded job listings.", "info");
-  };
-  const postJob = async () => {
-    try {
-      await axios.post(API + '/jobs', {
+  } catch (error) {
+    notify("Failed to load jobs.", "error");
+  }
+};
+
+ // Post a job (Admin)
+const postJob = async () => {
+  if (!addJob.title || !addJob.description || !addJob.skills) {
+    notify("Fill all fields to post a job.", "warning");
+    return;
+  }
+  try {
+    await axios.post(
+      'https://resume-matcher-backend-6-e3q6.onrender.com/api/jobs',
+      {
         title: addJob.title,
         description: addJob.description,
         skills: addJob.skills.split(',').map(s => s.trim())
-      }, { headers: { Authorization: `Bearer ${token}` } });
-      setAddJob({ title: '', description: '', skills: '' });
-      loadJobs();
-      notify("New job posted!", "success");
-    } catch (e) {
-      notify("Failed to post job.", "error");
-    }
-  };
+      },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    setAddJob({ title: '', description: '', skills: '' });
+    loadJobs();
+    notify("Job posted successfully!", "success");
+  } catch (error) {
+    console.error("Error posting job:", error);
+    notify("Failed to post job.", "error");
+  }
+};
 
-  // Apply Now
-  const handleApply = async () => {
-    if (!applyJobId || !applyResume) {
-      setApplyMsg('Fill in all fields!');
-      notify("Fill in all fields to apply.", "warning");
-      return;
-    }
-    try {
-      await axios.post(API+'/apply', {
-        jobId: applyJobId,
-        resumeText: applyResume
-      }, { headers: { Authorization: `Bearer ${token}` } });
-      setApplyMsg('Application sent!');
-      setApplyJobId('');
-      setApplyResume('');
-      notify("Your job application was submitted!", "success");
-    } catch {
-      setApplyMsg('Application error.');
-      notify("Application error.", "error");
-    }
-  };
-  // Admin: view applications
-  const fetchApplications = async (jobId) => {
-    const res = await axios.get(API + '/applications/' + jobId, { headers: { Authorization: `Bearer ${token}` } });
+
+
+  // Apply for a job
+const handleApply = async () => {
+  if (!applyJobId || !applyResume) {
+    notify("Fill all fields to apply.", "warning");
+    return;
+  }
+
+  try {
+    await axios.post(
+      'https://resume-matcher-backend-6-e3q6.onrender.com/api/apply',
+      { jobId: applyJobId, resumeText: applyResume },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    // Clear input fields and show success
+    setApplyMsg("Application sent!");
+    setApplyJobId('');
+    setApplyResume('');
+    notify("Your application was submitted!", "success");
+
+  } catch (error) {
+    console.error("Failed to apply:", error);
+    notify("Failed to submit application.", "error");
+  }
+};
+
+// Admin: view applications
+const fetchApplications = async (jobId) => {
+  try {
+    const res = await axios.get(
+      `https://resume-matcher-backend-6-e3q6.onrender.com/api/applications/${jobId}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
     setViewApplications({ show: true, jobId, apps: res.data.applications });
     notify("Loaded applications for job.", "info");
-  };
+  } catch (error) {
+    console.error(error.response?.data || error.message);
+    notify("Failed to load applications.", "error");
+  }
+};
 
   // PDF download
   const downloadPDF = () => {
