@@ -184,22 +184,25 @@ function App() {
   };
 
   // Auth
-  const handleAuth = async () => {
+const handleAuth = async (type) => {
   setError('');
   try {
-    const res = await axios.post(
-      'https://resume-matcher-backend-6-e3q6.onrender.com/api/login',
-      { username, password }
-    );
+    const url =
+      type === 'login'
+        ? 'https://resume-matcher-backend-6-e3q6.onrender.com/api/login'
+        : 'https://resume-matcher-backend-6-e3q6.onrender.com/api/register';
+
+    const res = await axios.post(url, { username, password });
 
     setToken(res.data.token);
     setPage('matcher');
-    notify("Login successful!", "success");
+    notify(type === 'login' ? "Login successful!" : "Registered & logged in!", "success");
   } catch (e) {
     setError(e.response?.data?.error || 'Auth error');
     notify("Authentication failed!", "error");
   }
 };
+
 
   // Resume upload with preview
   const handleUpload = async () => {
@@ -260,7 +263,7 @@ function App() {
 };
 
   // Admin analytics
- fetchAdminAnalytics = async () => {
+  const fetchAdminAnalytics = async () => {
   try {
     const res = await axios.get(
       'https://resume-matcher-backend-6-e3q6.onrender.com/api/admin',
